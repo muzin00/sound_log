@@ -1,9 +1,10 @@
-use std::sync::mpsc;
-
+use crate::recorder::Recorder;
 use cpal::{
     self,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
+use std::sync::mpsc;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_input_devices() -> Vec<String> {
@@ -16,32 +17,14 @@ pub fn get_input_devices() -> Vec<String> {
 }
 
 #[tauri::command]
-pub fn start_recording() -> Result<(), String> {
-    let host = cpal::default_host();
-
-    // デフォルトの入力デバイスを取得
-    let device = host
-        .default_input_device()
-        .ok_or("No default input device")?;
-
-    // デバイスのデフォルト設定を取得
-    let supported_config = device.default_input_config().map_err(|e| e.to_string())?;
-
-    println!("Recording with supported config: {:?}", supported_config);
-
-    // サンプルフォーマットがF32でない場合はエラー
-    if supported_config.sample_format() != cpal::SampleFormat::F32 {
-        return Err("Unsupported sample format".to_string());
-    }
-
-    let config = supported_config.into();
-
+pub fn start_recording(recorder: State<Recorder>) -> Result<(), String> {
     let (tx, rx) = mpsc::channel();
 
     // ストリームを作成
-    let stream = device
+    let stream = recorder
+        .device
         .build_input_stream(
-            &config,
+            &recorder.config,
             move |data: &[f32], _info| {
                 tx.send(data.to_vec()).unwrap();
             },

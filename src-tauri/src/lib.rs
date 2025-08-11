@@ -1,8 +1,12 @@
 mod commands;
+mod recorder;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let recorder = recorder::Recorder::new();
+
     tauri::Builder::default()
+        .manage(recorder)
         .invoke_handler(tauri::generate_handler![
             commands::get_input_devices,
             commands::start_recording
