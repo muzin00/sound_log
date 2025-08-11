@@ -20,9 +20,3 @@ pub fn start_recording(recorder: State<Recorder>) -> Result<(), String> {
     recorder.start()?;
     Ok(())
 }
-
-// #[test]
-// fn test_start_recording() {
-//     let audio_data = start_recording().unwrap();
-//     println!("Audio data: {:?}", audio_data);
-// }
