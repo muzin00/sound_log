@@ -1,8 +1,21 @@
 use cpal::{
     self,
-    traits::{DeviceTrait, HostTrait},
+    traits::{DeviceTrait, HostTrait, StreamTrait},
     Device, StreamConfig,
 };
+use std::sync::mpsc;
+
+pub struct Record {
+    pub samples: Vec<f32>,
+}
+
+impl Record {
+    pub fn new() -> Self {
+        Self {
+            samples: Vec::new(),
+        }
+    }
+}
 
 pub struct Recorder {
     pub device: Device,
@@ -32,5 +45,34 @@ impl Recorder {
             device,
             config: default_config.config(),
         }
+    }
+
+    pub fn start(&self) -> Result<Record, String> {
+        let (tx, rx) = mpsc::channel();
+
+        // ストリームを作成
+        let stream = self
+            .device
+            .build_input_stream(
+                &self.config,
+                move |data: &[f32], _info| {
+                    tx.send(data.to_vec()).unwrap();
+                },
+                |err| eprintln!("Error: {:?}", err),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
+
+        // ストリームを開始
+        stream.play().map_err(|e| e.to_string())?;
+
+        let mut record = Record::new();
+
+        while let Ok(data) = rx.recv() {
+            record.samples.extend(data);
+            println!("Samples length: {}", record.samples.len());
+        }
+
+        Ok(record)
     }
 }
