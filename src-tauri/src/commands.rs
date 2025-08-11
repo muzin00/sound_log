@@ -5,8 +5,6 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 
-use serde::{Deserialize, Serialize};
-
 #[tauri::command]
 pub fn get_input_devices() -> Vec<String> {
     let host = cpal::default_host();
@@ -17,15 +15,8 @@ pub fn get_input_devices() -> Vec<String> {
         .collect()
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AudioData {
-    channels: u16,
-    sample_rate: u32,
-    samples: Vec<f32>,
-}
-
 #[tauri::command]
-pub fn start_recording() -> Result<AudioData, String> {
+pub fn start_recording() -> Result<(), String> {
     let host = cpal::default_host();
 
     // デフォルトの入力デバイスを取得
@@ -76,11 +67,7 @@ pub fn start_recording() -> Result<AudioData, String> {
         };
     }
 
-    Ok(AudioData {
-        channels: config.channels,
-        sample_rate: config.sample_rate.0,
-        samples,
-    })
+    Ok(())
 }
 
 // #[test]
