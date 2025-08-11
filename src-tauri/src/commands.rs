@@ -17,7 +17,7 @@ pub fn get_input_devices() -> Vec<String> {
 
 #[tauri::command]
 pub fn start_recording(recorder: State<Recorder>) -> Result<(), String> {
-    let record = recorder.start()?;
+    recorder.start()?;
     Ok(())
 }
 

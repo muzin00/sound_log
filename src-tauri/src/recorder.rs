@@ -3,7 +3,8 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Device, StreamConfig,
 };
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
+use std::thread;
 
 pub struct Record {
     pub samples: Vec<f32>,
@@ -18,8 +19,9 @@ impl Record {
 }
 
 pub struct Recorder {
-    pub device: Device,
-    pub config: StreamConfig,
+    device: Device,
+    config: StreamConfig,
+    record: Arc<Mutex<Record>>,
 }
 
 impl Recorder {
@@ -44,35 +46,41 @@ impl Recorder {
         Self {
             device,
             config: default_config.config(),
+            record: Arc::new(Mutex::new(Record::new())),
         }
     }
 
-    pub fn start(&self) -> Result<Record, String> {
-        let (tx, rx) = mpsc::channel();
+    pub fn start(&self) -> Result<(), String> {
+        let device = self.device.clone();
+        let config = self.config.clone();
+        let record = Arc::clone(&self.record);
 
-        // ストリームを作成
-        let stream = self
-            .device
-            .build_input_stream(
-                &self.config,
-                move |data: &[f32], _info| {
-                    tx.send(data.to_vec()).unwrap();
-                },
-                |err| eprintln!("Error: {:?}", err),
-                None,
-            )
-            .map_err(|e| e.to_string())?;
+        thread::spawn(move || {
+            // チャネルを作成
+            let (tx, rx) = mpsc::channel();
 
-        // ストリームを開始
-        stream.play().map_err(|e| e.to_string())?;
+            // ストリームを作成
+            let stream = device
+                .build_input_stream(
+                    &config,
+                    move |data: &[f32], _info| {
+                        tx.send(data.to_vec()).unwrap();
+                    },
+                    |err| eprintln!("Error: {:?}", err),
+                    None,
+                )
+                .unwrap();
 
-        let mut record = Record::new();
+            // ストリームを開始
+            stream.play().unwrap();
 
-        while let Ok(data) = rx.recv() {
-            record.samples.extend(data);
-            println!("Samples length: {}", record.samples.len());
-        }
+            // スレッドを作成してデータを受信
+            while let Ok(data) = rx.recv() {
+                let mut record = record.lock().unwrap();
+                record.samples.extend(data);
+            }
+        });
 
-        Ok(record)
+        Ok(())
     }
 }
