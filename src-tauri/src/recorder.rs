@@ -1,7 +1,6 @@
 use cpal::{
     self,
     traits::{DeviceTrait, HostTrait, StreamTrait},
-    Device, StreamConfig,
 };
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -11,23 +10,34 @@ enum RecordEvent {
     Stop,
 }
 
-struct Record {
+pub struct Recorder {
+    sender: mpsc::Sender<RecordEvent>,
     samples: Arc<Mutex<Vec<f32>>>,
 }
 
-impl Record {
-    fn new(
-        receiver: Arc<Mutex<mpsc::Receiver<RecordEvent>>>,
-        device: Device,
-        config: StreamConfig,
-    ) -> Self {
+impl Recorder {
+    pub fn new() -> Self {
+        let (sender, receiver) = mpsc::channel::<RecordEvent>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        let host = cpal::default_host();
+
+        // デフォルトの入力デバイスを取得
+        let device = host
+            .default_input_device()
+            .ok_or("No default input device")
+            .unwrap();
+
+        // デバイスのデフォルト設定を取得
+        let default_config = device.default_input_config().unwrap();
+
         let samples = Arc::new(Mutex::new(Vec::new()));
         let samples_clone = Arc::clone(&samples);
 
         thread::spawn(move || {
             let stream = device
                 .build_input_stream(
-                    &config,
+                    &default_config.config(),
                     move |data: &[f32], _info| {
                         let mut samples = samples_clone.lock().unwrap();
                         samples.extend(data);
@@ -53,35 +63,7 @@ impl Record {
             }
         });
 
-        Self { samples }
-    }
-}
-
-pub struct Recorder {
-    sender: mpsc::Sender<RecordEvent>,
-    records: Vec<Record>,
-}
-
-impl Recorder {
-    pub fn new() -> Self {
-        let (sender, receiver) = mpsc::channel::<RecordEvent>();
-        let receiver = Arc::new(Mutex::new(receiver));
-
-        let host = cpal::default_host();
-
-        // デフォルトの入力デバイスを取得
-        let device = host
-            .default_input_device()
-            .ok_or("No default input device")
-            .unwrap();
-
-        // デバイスのデフォルト設定を取得
-        let default_config = device.default_input_config().unwrap();
-
-        let mut records = Vec::new();
-        records.push(Record::new(receiver, device, default_config.config()));
-
-        Self { sender, records }
+        Self { sender, samples }
     }
 
     pub fn start(&self) -> Result<(), String> {
