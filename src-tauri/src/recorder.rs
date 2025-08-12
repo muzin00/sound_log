@@ -12,7 +12,6 @@ enum RecordEvent {
 }
 
 struct Record {
-    thread: thread::JoinHandle<()>,
     samples: Arc<Mutex<Vec<f32>>>,
 }
 
@@ -25,7 +24,7 @@ impl Record {
         let samples = Arc::new(Mutex::new(Vec::new()));
         let samples_clone = Arc::clone(&samples);
 
-        let thread = thread::spawn(move || {
+        thread::spawn(move || {
             let stream = device
                 .build_input_stream(
                     &config,
@@ -54,7 +53,7 @@ impl Record {
             }
         });
 
-        Self { thread, samples }
+        Self { samples }
     }
 }
 
