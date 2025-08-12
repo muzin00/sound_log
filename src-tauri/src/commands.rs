@@ -15,6 +15,7 @@ pub fn stop_recording(recorder: State<Recorder>) -> Result<(), String> {
 
 #[tauri::command]
 pub fn play_audio(recorder: State<Recorder>) -> Result<recorder::Record, String> {
+    recorder.stop()?;
     let record = recorder.record();
     Ok(record)
 }
