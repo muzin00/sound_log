@@ -2,6 +2,7 @@ use crate::record::Record;
 use cpal::{
     self,
     traits::{DeviceTrait, HostTrait, StreamTrait},
+    BufferSize, SampleRate, StreamConfig,
 };
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -29,21 +30,27 @@ impl Player {
             .ok_or("No default output device")
             .unwrap();
 
-        // デバイスのデフォルト設定を取得
-        let default_config = device.default_output_config().unwrap();
+        let stream_config = StreamConfig {
+            channels: 1,
+            sample_rate: SampleRate(48000),
+            buffer_size: BufferSize::Default,
+        };
 
         thread::spawn(move || {
+            let mut playback_position = 0usize;
+
             let stream = device
                 .build_output_stream(
-                    &default_config.config(),
+                    &stream_config,
                     move |data: &mut [f32], _| {
                         // recordからサンプルデータを取得
                         let samples = record.read();
 
                         // 各サンプルを出力バッファにコピー
-                        for (i, sample) in data.iter_mut().enumerate() {
-                            if i < samples.len() {
-                                *sample = samples[i];
+                        for sample in data.iter_mut() {
+                            if playback_position < samples.len() {
+                                *sample = samples[playback_position];
+                                playback_position += 1;
                             } else {
                                 // データの終端に達したら0で埋める
                                 *sample = 0.0;
