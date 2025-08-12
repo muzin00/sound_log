@@ -7,10 +7,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(recorder)
-        .invoke_handler(tauri::generate_handler![
-            commands::get_input_devices,
-            commands::start_recording
-        ])
+        .invoke_handler(tauri::generate_handler![commands::start_recording])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
