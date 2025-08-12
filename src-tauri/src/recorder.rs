@@ -5,19 +5,19 @@ use cpal::{
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
-enum RecordEvent {
+enum Command {
     Start,
     Stop,
 }
 
 pub struct Recorder {
-    sender: mpsc::Sender<RecordEvent>,
+    sender: mpsc::Sender<Command>,
     samples: Arc<Mutex<Vec<f32>>>,
 }
 
 impl Recorder {
     pub fn new() -> Self {
-        let (sender, receiver) = mpsc::channel::<RecordEvent>();
+        let (sender, receiver) = mpsc::channel::<Command>();
         let receiver = Arc::new(Mutex::new(receiver));
 
         let host = cpal::default_host();
@@ -53,10 +53,10 @@ impl Recorder {
             loop {
                 let event = receiver.lock().unwrap().recv().unwrap();
                 match event {
-                    RecordEvent::Start => {
+                    Command::Start => {
                         stream.play().unwrap();
                     }
-                    RecordEvent::Stop => {
+                    Command::Stop => {
                         stream.pause().unwrap();
                     }
                 }
@@ -67,12 +67,12 @@ impl Recorder {
     }
 
     pub fn start(&self) -> Result<(), String> {
-        self.sender.send(RecordEvent::Start).unwrap();
+        self.sender.send(Command::Start).unwrap();
         Ok(())
     }
 
     pub fn stop(&self) -> Result<(), String> {
-        self.sender.send(RecordEvent::Stop).unwrap();
+        self.sender.send(Command::Stop).unwrap();
         Ok(())
     }
 }
