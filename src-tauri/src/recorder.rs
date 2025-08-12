@@ -10,9 +10,27 @@ enum Command {
     Stop,
 }
 
+struct Record {
+    samples: Vec<f32>,
+}
+
+impl Record {
+    pub fn new() -> Self {
+        Self {
+            samples: Vec::new(),
+        }
+    }
+
+    pub fn write(&mut self, samples: &[f32]) {
+        for sample in samples {
+            self.samples.push(*sample);
+        }
+    }
+}
+
 pub struct Recorder {
     sender: mpsc::Sender<Command>,
-    samples: Arc<Mutex<Vec<f32>>>,
+    record: Arc<Mutex<Record>>,
 }
 
 impl Recorder {
@@ -31,18 +49,14 @@ impl Recorder {
         // デバイスのデフォルト設定を取得
         let default_config = device.default_input_config().unwrap();
 
-        let samples = Arc::new(Mutex::new(Vec::new()));
-        let samples_clone = Arc::clone(&samples);
+        let record = Arc::new(Mutex::new(Record::new()));
+        let record_clone = Arc::clone(&record);
 
         thread::spawn(move || {
             let stream = device
                 .build_input_stream(
                     &default_config.config(),
-                    move |data: &[f32], _info| {
-                        let mut samples = samples_clone.lock().unwrap();
-                        samples.extend(data);
-                        println!("Received {} samples", samples.len());
-                    },
+                    move |data: &[f32], _| record_clone.lock().unwrap().write(data),
                     |err| eprintln!("Error: {:?}", err),
                     None,
                 )
@@ -63,7 +77,7 @@ impl Recorder {
             }
         });
 
-        Self { sender, samples }
+        Self { sender, record }
     }
 
     pub fn start(&self) -> Result<(), String> {
