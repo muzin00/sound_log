@@ -30,13 +30,13 @@ async function stopAudio() {
   <div v-if="isRecording">
     <button @click="stopRecording">停止</button>
   </div>
-  <div v-else>
+  <div v-else-if="!isPlaying">
     <button @click="startRecording">録音</button>
   </div>
   <div v-if="isPlaying">
     <button @click="stopAudio">停止</button>
   </div>
-  <div v-else>
+  <div v-else-if="!isRecording">
     <button @click="playAudio">再生</button>
   </div>
 </template>
