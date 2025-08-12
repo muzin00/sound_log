@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import { ref } from 'vue';
 
 interface Record {
   channels: number;
@@ -7,12 +8,16 @@ interface Record {
   sample_rate: number;
 }
 
+const isRecording = ref(false);
+
 async function startRecording() {
   await invoke('start_recording');
+  isRecording.value = true;
 }
 
 async function stopRecording() {
   await invoke('stop_recording');
+  isRecording.value = false;
 }
 
 async function playAudio() {
@@ -33,7 +38,11 @@ async function playAudio() {
 </script>
 
 <template>
-    <button @click="startRecording">録音</button>
+  <div v-if="isRecording">
     <button @click="stopRecording">停止</button>
+  </div>
+  <div v-else>
+    <button @click="startRecording">録音</button>
     <button @click="playAudio">再生</button>
+  </div>
 </template>
