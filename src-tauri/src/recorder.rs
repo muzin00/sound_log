@@ -49,7 +49,6 @@ impl Record {
                     }
                     RecordEvent::Stop => {
                         stream.pause().unwrap();
-                        break;
                     }
                 }
             }
