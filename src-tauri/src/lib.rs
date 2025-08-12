@@ -1,9 +1,11 @@
 mod commands;
+mod record;
 mod recorder;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let recorder = recorder::Recorder::new();
+    let record = record::Record::new();
+    let recorder = recorder::Recorder::new(record);
 
     tauri::Builder::default()
         .manage(recorder)
