@@ -9,7 +9,8 @@ pub fn run() {
         .manage(recorder)
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,
-            commands::stop_recording
+            commands::stop_recording,
+            commands::play_audio,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

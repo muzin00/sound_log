@@ -2,6 +2,7 @@ use cpal::{
     self,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
+use serde::{Deserialize, Serialize};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
@@ -10,13 +11,18 @@ enum Command {
     Stop,
 }
 
-struct Record {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Record {
+    channels: u16,
+    sample_rate: u32,
     samples: Vec<f32>,
 }
 
 impl Record {
-    pub fn new() -> Self {
+    pub fn new(channels: u16, sample_rate: u32) -> Self {
         Self {
+            channels,
+            sample_rate,
             samples: Vec::new(),
         }
     }
@@ -49,7 +55,10 @@ impl Recorder {
         // デバイスのデフォルト設定を取得
         let default_config = device.default_input_config().unwrap();
 
-        let record = Arc::new(Mutex::new(Record::new()));
+        let record = Arc::new(Mutex::new(Record::new(
+            default_config.channels(),
+            default_config.sample_rate().0,
+        )));
         let record_clone = Arc::clone(&record);
 
         thread::spawn(move || {
@@ -88,5 +97,9 @@ impl Recorder {
     pub fn stop(&self) -> Result<(), String> {
         self.sender.send(Command::Stop).unwrap();
         Ok(())
+    }
+
+    pub fn record(&self) -> Record {
+        self.record.lock().unwrap().clone()
     }
 }
