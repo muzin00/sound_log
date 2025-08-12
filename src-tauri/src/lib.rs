@@ -1,4 +1,5 @@
 mod commands;
+mod player;
 mod record;
 mod recorder;
 
@@ -6,13 +7,16 @@ mod recorder;
 pub fn run() {
     let record = record::Record::new();
     let recorder = recorder::Recorder::new(&record);
+    let player = player::Player::new(&record);
 
     tauri::Builder::default()
         .manage(recorder)
+        .manage(player)
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,
             commands::stop_recording,
             commands::play_audio,
+            commands::stop_audio,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

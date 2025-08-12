@@ -1,3 +1,4 @@
+use crate::player::Player;
 use crate::recorder::Recorder;
 use tauri::State;
 
@@ -14,6 +15,13 @@ pub fn stop_recording(recorder: State<Recorder>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn play_audio() -> Result<(), String> {
+pub fn play_audio(player: State<Player>) -> Result<(), String> {
+    player.start()?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn stop_audio(player: State<Player>) -> Result<(), String> {
+    player.stop()?;
     Ok(())
 }

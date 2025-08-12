@@ -2,13 +2,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { ref } from 'vue';
 
-interface Record {
-  channels: number;
-  samples: number[];
-  sample_rate: number;
-}
-
 const isRecording = ref(false);
+const isPlaying = ref(false);
 
 async function startRecording() {
   await invoke('start_recording');
@@ -21,19 +16,13 @@ async function stopRecording() {
 }
 
 async function playAudio() {
-  const record = await invoke<Record>('play_audio');
-  if (!record) return;
-  const audioContext = new AudioContext();
-  const audioBuffer = audioContext.createBuffer(
-    record.channels,
-    record.samples.length,
-    record.sample_rate
-  );
-  audioBuffer.copyToChannel(new Float32Array(record.samples), 0);
-  const source = audioContext.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
-  source.start();
+  await invoke('play_audio');
+  isPlaying.value = true;
+}
+
+async function stopAudio() {
+  await invoke('stop_audio');
+  isPlaying.value = false;
 }
 </script>
 
@@ -43,6 +32,11 @@ async function playAudio() {
   </div>
   <div v-else>
     <button @click="startRecording">録音</button>
+  </div>
+  <div v-if="isPlaying">
+    <button @click="stopAudio">停止</button>
+  </div>
+  <div v-else>
     <button @click="playAudio">再生</button>
   </div>
 </template>

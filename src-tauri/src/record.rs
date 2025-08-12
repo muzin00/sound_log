@@ -17,4 +17,8 @@ impl Record {
             self.samples.lock().unwrap().push(*sample);
         }
     }
+
+    pub fn read(&self) -> Vec<f32> {
+        self.samples.lock().unwrap().clone()
+    }
 }
