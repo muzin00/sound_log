@@ -8,6 +8,7 @@ use std::thread;
 
 enum RecordEvent {
     Start,
+    Stop,
 }
 
 struct Record {
@@ -45,6 +46,10 @@ impl Record {
                 match event {
                     RecordEvent::Start => {
                         stream.play().unwrap();
+                    }
+                    RecordEvent::Stop => {
+                        stream.pause().unwrap();
+                        break;
                     }
                 }
             }
@@ -89,6 +94,11 @@ impl Recorder {
 
     pub fn start(&self) -> Result<(), String> {
         self.sender.send(RecordEvent::Start).unwrap();
+        Ok(())
+    }
+
+    pub fn stop(&self) -> Result<(), String> {
+        self.sender.send(RecordEvent::Stop).unwrap();
         Ok(())
     }
 }
