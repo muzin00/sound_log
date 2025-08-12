@@ -1,17 +1,20 @@
+use std::sync::{Arc, Mutex};
+
+#[derive(Debug, Clone)]
 pub struct Record {
-    samples: Vec<f32>,
+    samples: Arc<Mutex<Vec<f32>>>,
 }
 
 impl Record {
     pub fn new() -> Self {
         Self {
-            samples: Vec::new(),
+            samples: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
-    pub fn write(&mut self, samples: &[f32]) {
+    pub fn write(&self, samples: &[f32]) {
         for sample in samples {
-            self.samples.push(*sample);
+            self.samples.lock().unwrap().push(*sample);
         }
     }
 }

@@ -16,7 +16,8 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    pub fn new(mut record: Record) -> Self {
+    pub fn new(record: &Record) -> Self {
+        let record = record.clone();
         let (sender, receiver) = mpsc::channel::<Command>();
         let receiver = Arc::new(Mutex::new(receiver));
 
