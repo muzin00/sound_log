@@ -6,26 +6,64 @@ use cpal::{
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
-pub struct Record {
-    pub samples: Vec<f32>,
+enum RecordEvent {
+    Start,
+}
+
+struct Record {
+    thread: thread::JoinHandle<()>,
+    samples: Arc<Mutex<Vec<f32>>>,
 }
 
 impl Record {
-    pub fn new() -> Self {
-        Self {
-            samples: Vec::new(),
-        }
+    fn new(
+        receiver: Arc<Mutex<mpsc::Receiver<RecordEvent>>>,
+        device: Device,
+        config: StreamConfig,
+    ) -> Self {
+        let samples = Arc::new(Mutex::new(Vec::new()));
+        let samples_clone = Arc::clone(&samples);
+
+        let thread = thread::spawn(move || {
+            let stream = device
+                .build_input_stream(
+                    &config,
+                    move |data: &[f32], _info| {
+                        let mut samples = samples_clone.lock().unwrap();
+                        samples.extend(data);
+                        println!("Received {} samples", samples.len());
+                    },
+                    |err| eprintln!("Error: {:?}", err),
+                    None,
+                )
+                .unwrap();
+
+            stream.pause().unwrap();
+
+            loop {
+                let event = receiver.lock().unwrap().recv().unwrap();
+                match event {
+                    RecordEvent::Start => {
+                        stream.play().unwrap();
+                    }
+                }
+            }
+        });
+
+        Self { thread, samples }
     }
 }
 
 pub struct Recorder {
-    device: Device,
-    config: StreamConfig,
-    record: Arc<Mutex<Record>>,
+    sender: mpsc::Sender<RecordEvent>,
+    records: Vec<Record>,
 }
 
 impl Recorder {
     pub fn new() -> Self {
+        let (sender, receiver) = mpsc::channel::<RecordEvent>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
         let host = cpal::default_host();
 
         // デフォルトの入力デバイスを取得
@@ -43,44 +81,14 @@ impl Recorder {
             panic!("Unsupported sample format: {:?}", sample_format);
         }
 
-        Self {
-            device,
-            config: default_config.config(),
-            record: Arc::new(Mutex::new(Record::new())),
-        }
+        let mut records = Vec::new();
+        records.push(Record::new(receiver, device, default_config.config()));
+
+        Self { sender, records }
     }
 
     pub fn start(&self) -> Result<(), String> {
-        let device = self.device.clone();
-        let config = self.config.clone();
-        let record = Arc::clone(&self.record);
-
-        thread::spawn(move || {
-            // チャネルを作成
-            let (tx, rx) = mpsc::channel();
-
-            // ストリームを作成
-            let stream = device
-                .build_input_stream(
-                    &config,
-                    move |data: &[f32], _info| {
-                        tx.send(data.to_vec()).unwrap();
-                    },
-                    |err| eprintln!("Error: {:?}", err),
-                    None,
-                )
-                .unwrap();
-
-            // ストリームを開始
-            stream.play().unwrap();
-
-            // スレッドを作成してデータを受信
-            while let Ok(data) = rx.recv() {
-                let mut record = record.lock().unwrap();
-                record.samples.extend(data);
-            }
-        });
-
+        self.sender.send(RecordEvent::Start).unwrap();
         Ok(())
     }
 }
