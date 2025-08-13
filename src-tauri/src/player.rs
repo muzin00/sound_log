@@ -31,8 +31,8 @@ impl Player {
             .unwrap();
 
         let stream_config = StreamConfig {
-            channels: 1,
-            sample_rate: SampleRate(48000),
+            channels: record.channels,
+            sample_rate: SampleRate(record.sample_rate),
             buffer_size: BufferSize::Default,
         };
 

@@ -16,8 +16,7 @@ pub struct Recorder {
 }
 
 impl Recorder {
-    pub fn new(record: &Record) -> Self {
-        let record = record.clone();
+    pub fn new(record: &mut Record) -> Self {
         let (sender, receiver) = mpsc::channel::<Command>();
         let receiver = Arc::new(Mutex::new(receiver));
 
@@ -31,6 +30,12 @@ impl Recorder {
 
         // デバイスのデフォルト設定を取得
         let default_config = device.default_input_config().unwrap();
+
+        // 録音データの設定を更新
+        record.channels = default_config.channels();
+        record.sample_rate = default_config.sample_rate().0;
+
+        let record = record.clone();
 
         thread::spawn(move || {
             let stream = device
